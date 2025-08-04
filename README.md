@@ -15,7 +15,7 @@ Get Google Search results using browser as requests sometimes sucks. It includes
 Clone the repository and install in editable mode:
 
 ```bash
-pip install pip install pyselsearch
+pip install pyselsearch
 ```
 
 ## Usage
