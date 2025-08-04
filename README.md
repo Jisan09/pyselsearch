@@ -15,9 +15,7 @@ Get Google Search results using browser as requests sometimes sucks. It includes
 Clone the repository and install in editable mode:
 
 ```bash
-git clone https://github.com/jisan09/pyselsearch.git
-cd pyselsearch
-pip install -e .[dev]
+pip install pip install pyselsearch
 ```
 
 ## Usage
@@ -44,16 +42,6 @@ Additional options:
 
 ```bash
 pyselsearch "search query" --no-headless --proxy "user:pass@host:port"
-```
-
-## Project Structure
-
-```
-pyselsearch/
-├── core.py             # Google search implementation
-├── cli.py              # CLI entry point
-└──proxy_gen.py         # Chrome extension generator
-
 ```
 
 ## License
