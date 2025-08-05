@@ -10,7 +10,7 @@ from pyselsearch.proxy_gen import create_proxy_auth_extension
 class GoogleSearch:
     def __init__(
         self,
-        headless: bool = True,
+        headless: bool = False,
         lang: Optional[str] = 'en',
         proxy: Optional[str] = None,
         window_size: Optional[str] = None,
@@ -82,14 +82,17 @@ class GoogleSearch:
 
     def search(self, query: str, sleep_time: int = 2) -> list[dict]:
         results = []
+        self.driver.sleep(int(sleep_time/2))
         self.driver.uc_activate_cdp_mode(f"https://www.google.com/?hl={self.lang}")
+        self.driver.cdp.gui_click_element(self.SEARCH_INPUT_SELECTOR)
         self.driver.connect()
         self.driver.press_keys(self.SEARCH_INPUT_SELECTOR, query + "\n")
         self.driver.sleep(sleep_time)
         with contextlib.suppress(Exception):
             self.driver.disconnect()
             self.driver.sleep(sleep_time)
-            self.driver.uc_gui_click_captcha('iframe[src*="/recaptcha/"]')
+            self.driver.uc_gui_click_captcha()
+            # TODO: need to figure out later how to solve this re-captcha
             self.driver.connect()
         self.driver.sleep(sleep_time)
 

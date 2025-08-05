@@ -41,7 +41,7 @@ pyselsearch "search query"
 Additional options:
 
 ```bash
-pyselsearch "search query" --no-headless --proxy "user:pass@host:port"
+pyselsearch "search query" --headless --proxy "user:pass@host:port"
 ```
 
 ## License

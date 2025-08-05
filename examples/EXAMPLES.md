@@ -64,7 +64,7 @@ pyselsearch "site:housing.com plots near Gandhinagar"
 ### With Proxy, Non-Headless, and Custom Language:
 
 ```bash
-pyselsearch "site:housing.com villa in goa" --proxy "user:pass@proxy.example.com:8080" --no-headless --lang hi
+pyselsearch "site:housing.com villa in goa" --proxy "user:pass@proxy.example.com:8080" --headless --lang hi
 ```
 
 ## Output Example
