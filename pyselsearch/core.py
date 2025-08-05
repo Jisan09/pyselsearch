@@ -1,6 +1,7 @@
 import contextlib
 from typing import Optional
 from seleniumbase import Driver
+import seleniumbase.config as sb_config
 from selenium.webdriver.common.by import By
 from selenium.common.exceptions import NoSuchElementException
 from pyselsearch.proxy_gen import create_proxy_auth_extension
@@ -12,6 +13,8 @@ class GoogleSearch:
         headless: bool = True,
         lang: Optional[str] = 'en',
         proxy: Optional[str] = None,
+        window_size: Optional[str] = None,
+        window_position: Optional[str] = None,
         desc_selector: Optional[str] = '[data-sncf]',
         search_selector: Optional[str] = 'textarea[name="q"]',
         results_selector: Optional[str] = '#search div[data-rpos]'
@@ -30,14 +33,16 @@ class GoogleSearch:
                                                         proxy_host=host,
                                                         proxy_port=port)
 
+        sb_config.binary_location = "cft"
         self.driver = Driver(
             uc=True,
-            driver_version="136",
+            binary_location="cft",
+            browser="chrome",
             headless=headless,
-            extension_dir=extension_dir
+            extension_dir=extension_dir,
+            window_size=window_size,
+            window_position=window_position,
         )
-
-        self.driver.uc_activate_cdp_mode()
         self.lang = lang
         self.DESCRIPTION_SELECTOR = desc_selector
         self.SEARCH_INPUT_SELECTOR = search_selector
@@ -77,17 +82,15 @@ class GoogleSearch:
 
     def search(self, query: str, sleep_time: int = 2) -> list[dict]:
         results = []
-        self.driver.uc_open_with_reconnect(f"http://www.google.com/?hl={self.lang}")
+        self.driver.uc_activate_cdp_mode(f"https://www.google.com/?hl={self.lang}")
+        self.driver.connect()
+        self.driver.press_keys(self.SEARCH_INPUT_SELECTOR, query + "\n")
         self.driver.sleep(sleep_time)
-
         with contextlib.suppress(Exception):
-            self.driver.uc_gui_click_captcha(timeout=10)
+            self.driver.disconnect()
             self.driver.sleep(sleep_time)
-
-        self.driver.reconnect()
-        search_box = self.driver.find_element(By.CSS_SELECTOR, self.SEARCH_INPUT_SELECTOR)
-        search_box.send_keys(query)
-        search_box.submit()
+            self.driver.uc_gui_click_captcha('iframe[src*="/recaptcha/"]')
+            self.driver.connect()
         self.driver.sleep(sleep_time)
 
         lister_items = self.driver.find_elements(By.CSS_SELECTOR, self.RESULTS_CONTAINER_SELECTOR)

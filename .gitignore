@@ -207,5 +207,6 @@ __marimo__/
 pyselsearch/downloaded_files/
 pyselsearch/proxy_extension/
 examples/downloaded_files/
+local/
 
 .DS_Store
