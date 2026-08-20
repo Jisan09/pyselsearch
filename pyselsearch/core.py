@@ -1,4 +1,5 @@
 import contextlib
+import json
 from typing import Optional
 from seleniumbase import Driver
 import seleniumbase.config as sb_config
@@ -16,6 +17,9 @@ class GoogleSearch:
         window_size: Optional[str] = None,
         window_position: Optional[str] = None,
         desc_selector: Optional[str] = '[data-sncf]',
+        ai_search_button: Optional[str] = 'button[role="link"]',
+        ai_result_selector: Optional[str] = '//div[@data-container-id="main-col"]',
+        ai_button_retries: int = 3,
         search_selector: Optional[str] = 'textarea[name="q"]',
         results_selector: Optional[str] = '#search div[data-rpos]'
     ):
@@ -46,11 +50,14 @@ class GoogleSearch:
         self.lang = lang
         self.DESCRIPTION_SELECTOR = desc_selector
         self.SEARCH_INPUT_SELECTOR = search_selector
+        self.AI_BUTTON_SELECTOR = ai_search_button
+        self.AI_RESULTS_SELECTOR = ai_result_selector
+        self.AI_BUTTON_RETRIES = ai_button_retries
         self.RESULTS_CONTAINER_SELECTOR = results_selector
 
     @staticmethod
     def _get_if_exists(parent, by: By, selector: str):
-        with contextlib.suppress(NoSuchElementException):
+        with contextlib.suppress(NoSuchElementException, AttributeError):
             return parent.find_element(by, selector)
 
     @staticmethod
@@ -80,11 +87,39 @@ class GoogleSearch:
             "description": description,
         }
 
-    def search(self, query: str, sleep_time: int = 2) -> list[dict]:
+    @staticmethod
+    def _parse_ai_item(item) -> Optional[dict]:
+        text = item.text.strip()
+        start = text.find("{")
+        end = text.rfind("}") + 1
+        if start == -1 or end == 0:
+            return {}
+        try:
+            return json.loads(text[start:end])
+        except json.JSONDecodeError:
+            return {}
+
+    def _click_ai_button_with_retries(self, sleep_time: int) -> None:
+        for attempt in range(self.AI_BUTTON_RETRIES):
+            buttons = self.driver.cdp.find_elements(self.AI_BUTTON_SELECTOR)
+            if len(buttons) > 0:
+                self.driver.cdp.gui_click_element(self.AI_BUTTON_SELECTOR)
+                return
+            if attempt < self.AI_BUTTON_RETRIES - 1:
+                self.driver.uc_activate_cdp_mode(f"https://www.google.com/?hl={self.lang}")
+                self.driver.sleep(sleep_time)
+        raise NoSuchElementException(f"AI search button not found: {self.AI_BUTTON_SELECTOR}")
+
+    def search(self, query: str, sleep_time: int = 2, ai_mode=False) -> list[dict]:
         results = []
         self.driver.sleep(int(sleep_time/2))
         self.driver.uc_activate_cdp_mode(f"https://www.google.com/?hl={self.lang}")
-        self.driver.cdp.gui_click_element(self.SEARCH_INPUT_SELECTOR)
+        self.driver.sleep(int(sleep_time/2))
+        if ai_mode:
+            self._click_ai_button_with_retries(sleep_time)
+        else:
+            self.driver.cdp.gui_click_element(self.SEARCH_INPUT_SELECTOR)
+        self.driver.sleep(sleep_time)
         self.driver.connect()
         self.driver.press_keys(self.SEARCH_INPUT_SELECTOR, query + "\n")
         self.driver.sleep(sleep_time)
@@ -95,10 +130,15 @@ class GoogleSearch:
             # TODO: need to figure out later how to solve this re-captcha
             self.driver.connect()
         self.driver.sleep(sleep_time)
+        if ai_mode:
+            lister_items = self.driver.find_elements(By.XPATH, self.AI_RESULTS_SELECTOR)
+            parser = self._parse_ai_item
+        else:
+            lister_items = self.driver.find_elements(By.CSS_SELECTOR, self.RESULTS_CONTAINER_SELECTOR)
+            parser = self._parse_item
 
-        lister_items = self.driver.find_elements(By.CSS_SELECTOR, self.RESULTS_CONTAINER_SELECTOR)
         for item in lister_items:
-            result = self._parse_item(item)
+            result = parser(item)
             if result:
                 results.append(result)
 
